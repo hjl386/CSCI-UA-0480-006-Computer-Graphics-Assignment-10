@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title> Rendering Pipeline Assignment 10 </title>
+    </head>
+    <body bgcolor=black text=white>
+        <center>
+            <canvas id='canvas1' width=600 height=600></canvas>
+        </center>
+    </body>
+    <script src=M.js></script>
+    <script src=lib2g.js></script>
+    <script src=S.js></script>
+    
+    <script id='vs_script' type='x-shader/x-vertex'>
+        attribute vec3 aPos, aNor;
+        varying   vec3 vPos, vNor;
+        uniform   mat4 matrix, invMatrix;
+        void main() {
+            vec4 pos = matrix * vec4(aPos, 1.);
+            vec4 nor = vec4(aNor, 0.) * invMatrix;
+
+            gl_Position = pos;
+            vPos = pos.xyz;
+            vNor = nor.xyz;
+        }
+    </script>
+
+    <script id='fs_script' type='x-shader/x-fragment'>
+        varying vec3 vPos, vNor;
+        
+        struct Light{
+            vec3 direction;
+            vec3 color;
+        } lights[1];
+
+        struct Material {
+            vec3 ambient;
+            vec3 diffuse;
+            vec3 specular;
+            float power;
+        };
+        
+        vec3 backgroundColor(vec3 dir){
+            float t = .5 - .5 * dir.y;
+            return mix(vec3(.2,.01, .01), vec3(.01,.01,.1), 1. - t * t);
+        }
+        
+        vec3 phong(vec3 N, vec3 E, Material C) {
+            vec3 c = C.ambient * backgroundColor(N) + vec3(C.specular);
+            for(int i = 0; i < 1; i++){
+                vec3 LDir = normalize(lights[i].direction);
+                float d = max(0., dot(N, LDir));         
+                vec3  R = reflect(-LDir, N);
+                float s = pow(max(0., dot(E, R)), C.power);       
+                c += lights[i].color * (d * C.diffuse + s * C.specular * .1*C.power);
+            }
+            return c;
+        }
+
+        void main() {
+            vec3 normal = normalize(vNor);
+            lights[0].direction = vec3(2., 1., 3.);
+            lights[0].color = vec3(2., .5, 1.);
+            Material m1;
+            m1.ambient = vec3(.0, .0, 1.);
+            m1.diffuse = normal;
+            m1.specular = m1.diffuse * 10.;
+            m1.power = 3.;
+            vec3 c = phong(normal, vec3(0.,0.,0), m1);
+            gl_FragColor = vec4(sqrt(c), 1.);
+         }
+    </script>
+    
+    <script>
+        var m = M.identityMatrix();
+        var vs = vs_script.innerHTML, fs = fs_script.innerHTML;
+
+        addTextEditor(fs, function() { canvas1.setShaders(vs, this.value); });
+
+        var obj1, obj2, obj3, obj4, obj5;
+        gl_start(canvas1, vs, fs, function(time){
+            M.identity(m);
+            
+            M.save(m);
+            M.scale(m, 1);
+            M.rotateY(m, time * 10);
+            obj1.setMatrix(m);
+            M.restore(m);
+            
+            M.save(m);
+            M.scale(m, 2);
+            M.rotateZ(m, time * 10);
+            obj2.setMatrix(m);
+            M.restore(m);
+            
+            M.save(m);
+            M.scale(m, 2);
+            M.rotateX(m, time * 10);
+            obj3.setMatrix(m);
+            M.restore(m);
+            
+            M.save(m);
+            M.scale(m, 2);
+            M.rotateX(m, time * 10);
+            obj4.setMatrix(m);
+            M.restore(m);
+            
+            M.save(m);
+            M.scale(m, 0.2);
+            const v = [0, 0, time * 0.4];
+            M.translate(m, v);
+            M.rotateX(m, time * 10);
+//            M.translate(m, -2);
+//            M.transform(m, 2);
+            obj5.setMatrix(m);
+            M.restore(m);
+          
+        });
+        
+        var scene = new Scene();
+
+        obj1 = new SceneObject();
+        obj1.setVertices([
+            -.2, -.2,  0, 0, 0, 1,
+            .2,  -.2,  0, 0, 0, 1,
+            .2,   .2,  0, 0, 0, 1,
+            .2,   .2,  0, 0, 0, 1,
+            -.2,  .2,  0, 0, 0, 1,
+            -.2, -.2,  0, 0, 0, 1,
+        ]);
+        scene.addObject(obj1);
+        
+        obj2 = new SceneObject();
+        obj2.setVertices([
+            .2, -.2,   0,  1, 0, 2, 
+            .2,  .2,   0,  1, 0, 2, 
+            .2,  .2, -.4,  1, 0, 2,
+            .2,  .2, -.4,  1, 0, 2,
+            .2, -.2, -.4,  1, 0, 2,
+            .2, -.2,   0,  1, 0, 2,
+        ]);
+        scene.addObject(obj2);
+        
+        obj3 = new SceneObject();
+        obj3.setVertices([
+            .2, -.2,   0,  1, 0, 2, 
+            .2,  .2,   0,  1, 0, 2, 
+            .2,  .2, -.4,  1, 0, 2,
+            .2,  .2, -.4,  1, 0, 2,
+            .2, -.2, -.4,  1, 0, 2,
+            .2, -.2,   0,  1, 0, 2,
+        ]);
+        scene.addObject(obj3);
+        
+        obj4 = new SceneObject();
+        obj4.setVertices([
+            -.2, -.2,   0,  -1, 0, 0, 
+            -.2,  .2,   0,  -1, 0, 0, 
+            -.2,  .2, -.4,  -1, 0, 0,
+            -.2,  .2, -.4,  -1, 0, 0,
+            -.2, -.2, -.4,  -1, 0, 0,
+            -.2, -.2,   0,  -1, 0, 0,
+        ]);
+        scene.addObject(obj4);
+        console.log(obj4);
+        
+        obj5 = new SceneObject();
+        //obj5.setVertices(S.parametricMesh(S.sphere, 25, 50));
+        const a = S.parametricMesh(S.sphere, 25, 50);
+        const flatten = arr => arr.reduce((acc, val) =>     acc.concat(Array.isArray(val) ? flatten(val) : val),[]);
+//        flatten(a);
+        obj5.setVertices(flatten(a));
+        scene.addObject(obj5);
+        console.log(obj5);
+        
+        canvas1.scene = scene;
+
+    </script>
+</html>
